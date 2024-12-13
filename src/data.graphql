@@ -1,0 +1,149 @@
+type Query {
+  # Products Queries
+  listProducts(page: Int!, pageSize: Int!): PaginatedProducts
+  searchProductsByCategory(categoryId: ID!): [Product]
+
+  # Client Specific Queries
+  myOrders: [Order]
+
+  # Manager Specific Queries
+  showClientOrders(clientId: ID!): [Order]
+}
+
+type Mutation {
+  # Authentication Mutations
+  signUp(input: SignUpInput!): AuthPayload
+  signIn(email: String!, password: String!): AuthPayload
+  signOut: Boolean
+  forgotPassword(email: String!): Boolean
+  resetPassword(token: String!, newPassword: String!): Boolean
+
+  # Product Management (Manager Only)
+  createProduct(input: ProductInput!): Product
+  updateProduct(productId: ID!, input: ProductInput!): Product
+  deleteProduct(productId: ID!): Boolean
+  disableProduct(productId: ID!): Boolean
+
+  # Client Actions
+  buyProducts(input: BuyInput!): Order
+  addProductToCart(productId: ID!): Cart
+  likeProduct(productId: ID!): Boolean
+}
+
+# Common Types
+type Product {
+  id: ID!
+  name: String!
+  description: String
+  stock: Float
+  isActive: Boolean!
+  price: Float!
+  createdAt: String!
+  updatedAt: String!
+  images: [String]
+  categories: [Category]
+}
+
+type PaginatedProducts {
+  products: [Product]
+  total: Int!
+  page: Int!
+  pageSize: Int!
+}
+
+type Order {
+  id: ID!
+  client: User!
+  products: [OrderProduct!]
+  totalAmount: Float!
+  status: String!
+  createdAt: String!
+}
+
+type OrderProduct {
+  product: Product!
+  quantity: Int!
+}
+
+type Cart {
+  user: User!
+  items: [CartItem!]
+}
+
+type CartItem {
+  product: Product!
+  quantity: Int!
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
+# User Types
+type User {
+  id: ID!
+  email: String!
+  phoneNumber: String
+  username: String
+  address: String
+  verificatedAt: String
+  createdAt: String!
+  updatedAt: String!
+  lastLoginAt: String
+  likedProducts: [Product]
+  roles: [Role]
+}
+
+type Role {
+  id: ID!
+  name: String!
+  description: String
+}
+
+type Category {
+  id: ID!
+  name: String!
+  description: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+# Input Types
+input SignUpInput {
+  email: String!
+  password: String!
+  roleIds: [ID!]!
+}
+
+input ProductInput {
+  name: String!
+  description: String
+  price: Float!
+  stock: Float
+  categoryIds: [ID!]
+}
+
+input BuyInput {
+  products: [BuyProductInput!]!
+}
+
+input BuyProductInput {
+  productId: ID!
+  quantity: Int!
+}
+
+# Subscriptions for Real-Time Features
+type Subscription {
+  stockLowNotification(productId: ID!): StockLowPayload
+  passwordChangeNotification(userId: ID!): PasswordChangePayload
+}
+
+type StockLowPayload {
+  product: Product!
+  user: User!
+}
+
+type PasswordChangePayload {
+  user: User!
+}
