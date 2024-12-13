@@ -1,7 +1,15 @@
+scalar Date
+
+enum ProviderPaymentStatus {
+  SUCCEEDED  
+  PROCESSING  
+  CANCELED  
+  FAILED  
+}
+
 type Query {
   # Products Queries
-  listProducts(page: Int!, pageSize: Int!): PaginatedProducts
-  searchProductsByCategory(categoryId: ID!): [Product]
+  listAndSearchProducts(page: Int!, pageSize: Int!, categoryId: ID): PaginatedProducts
 
   # Client Specific Queries
   myOrders: [Order]
@@ -13,20 +21,29 @@ type Query {
 type Mutation {
   # Authentication Mutations
   signUp(input: SignUpInput!): AuthPayload
-  signIn(email: String!, password: String!): AuthPayload
+  signIn(input: LoginInput!): AuthPayload
   signOut: Boolean
-  forgotPassword(email: String!): Boolean
-  resetPassword(token: String!, newPassword: String!): Boolean
+  forgotPassword(input: ForgotPasswordInput!): Boolean
+  resetPassword(input: ResetPasswordInput!): Boolean
 
   # Product Management (Manager Only)
-  createProduct(input: ProductInput!): Product
-  updateProduct(productId: ID!, input: ProductInput!): Product
-  deleteProduct(productId: ID!): Boolean
-  disableProduct(productId: ID!): Boolean
+  createProduct(input: CreateProductInput!): Product
+  updateProduct(input: UpdateProductInput!): Product
+  deleteProduct(id: ID!): Boolean
+
+  # Role Management
+  createRole(input: CreateRoleInput!): Role
+  updateRole(input: UpdateRoleInput!): Role
+  deleteRole(roleId: ID!): Boolean
+
+  # Category Management
+  createCategory(input: CreateCategoryInput!): Category
+  updateCategory(input: UpdateCategoryInput!): Category
+  deleteCategory(id: ID!): Boolean
 
   # Client Actions
   buyProducts(input: BuyInput!): Order
-  addProductToCart(productId: ID!): Cart
+  addProductToCart(input: AddProductToCartInput!): CartItem
   likeProduct(productId: ID!): Boolean
 }
 
@@ -38,9 +55,12 @@ type Product {
   stock: Float
   isActive: Boolean!
   price: Float!
-  createdAt: String!
-  updatedAt: String!
+  createdAt: Date!
+  updatedAt: Date!
   images: [String]
+  createdBy: ID!
+
+  creator: User!
   categories: [Category]
 }
 
@@ -53,26 +73,45 @@ type PaginatedProducts {
 
 type Order {
   id: ID!
-  client: User!
-  products: [OrderProduct!]
+  clientId: ID!
   totalAmount: Float!
   status: String!
-  createdAt: String!
+  createdAt: Date!
+
+  products: [OrderDetail!]
+  client: User!
+  payments: [PaymentAttempt!]!
 }
 
-type OrderProduct {
+type PaymentAttempt {
+  id: ID!
+  orderId: ID!
+  providerCustomerId: ID!
+  providerPaymentId: ID!
+  providerClientSecret: ID!
+  providerStatus: ProviderPaymentStatus!
+  providerAmount: Float!
+  providerPaymentMethod: String!
+  createdAt: Date
+  updatedAt: Date
+
+  order: Order!
+}
+
+type OrderDetail {
   product: Product!
   quantity: Int!
-}
-
-type Cart {
-  user: User!
-  items: [CartItem!]
 }
 
 type CartItem {
-  product: Product!
+  userId: ID!
+  productId: ID!
   quantity: Int!
+  createdAt: Date!
+  updatedAt: Date
+
+  product: Product!
+  user: User!
 }
 
 type AuthPayload {
@@ -85,14 +124,30 @@ type User {
   id: ID!
   email: String!
   phoneNumber: String
-  username: String
   address: String
   verificatedAt: String
-  createdAt: String!
-  updatedAt: String!
+  createdAt: Date!
+  updatedAt: Date!
   lastLoginAt: String
-  likedProducts: [Product]
-  roles: [Role]
+  verificationToken: String
+  verificationExpiresAt: String
+  resetPasswordToken: String
+  resetPasswordExpiresAt: String
+
+  likedProducts: [UserProductLike]!
+  cartProducts:[CartItem]!
+  roles: [Role!]!
+  createdProducts: [User]
+  orders: [Order!]!
+}
+
+type UserProductLike{
+  productId: ID!
+  userId: ID!
+  createdAt: Date!
+
+  user: User!
+  product: Product!
 }
 
 type Role {
@@ -105,21 +160,47 @@ type Category {
   id: ID!
   name: String!
   description: String
-  createdAt: String!
-  updatedAt: String!
+  createdAt: Date!
+  updatedAt: Date!
+
+  products: [Product!]!
 }
 
 # Input Types
 input SignUpInput {
   email: String!
   password: String!
-  roleIds: [ID!]!
+  phoneNumber: String
+  address: String
 }
 
-input ProductInput {
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+input ResetPasswordInput {
+  token: String!
+  newPassword: String!
+}
+
+input ForgotPasswordInput {
+  email: String!
+}
+
+input CreateProductInput {
   name: String!
   description: String
   price: Float!
+  stock: Float
+  categoryIds: [ID!]
+}
+
+input UpdateProductInput {
+  id: ID!
+  name: String
+  description: String
+  price: Float
   stock: Float
   categoryIds: [ID!]
 }
@@ -129,6 +210,33 @@ input BuyInput {
 }
 
 input BuyProductInput {
+  productId: ID!
+  quantity: Int!
+}
+
+input CreateRoleInput {
+  name: String!
+  description: String
+}
+
+input UpdateRoleInput {
+  id: ID!
+  name: String
+  description: String
+}
+
+input CreateCategoryInput {
+  name: String!
+  description: String
+}
+
+input UpdateCategoryInput {
+  id: ID!
+  name: String
+  description: String
+}
+
+input AddProductToCartInput {
   productId: ID!
   quantity: Int!
 }

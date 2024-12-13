@@ -10,6 +10,7 @@ import { join } from 'path';
       typePaths: ['./**/*.graphql'],
       definitions: {
         path: join(process.cwd(), 'src/graphql.ts'),
+        outputAs: 'class',
       },
     }),
   ],
